@@ -2,17 +2,25 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// ✅ Ambil dari Railway Variables, bukan hardcode
-const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const SECRET_KEY  = process.env.SECRET_KEY;
+// ✅ Ambil dari Railway Variables
+const WEBHOOK_ADMIN     = process.env.WEBHOOK_ADMIN;
+const WEBHOOK_BAN       = process.env.WEBHOOK_BAN;
+const WEBHOOK_KICK      = process.env.WEBHOOK_KICK;
+const WEBHOOK_UNBAN     = process.env.WEBHOOK_UNBAN;
+const WEBHOOK_VIOLATION = process.env.WEBHOOK_VIOLATION;
+const SECRET_KEY        = process.env.WEBHOOK_SECRET;
 
 const ALLOWED_GAME_IDS = [
   "9860616417",
 ];
 
 // Validasi saat startup
-if (!WEBHOOK_URL) console.error("[PROXY] ❌ DISCORD_WEBHOOK_URL belum diset di Railway Variables!");
-if (!SECRET_KEY)  console.error("[PROXY] ❌ SECRET_KEY belum diset di Railway Variables!");
+if (!WEBHOOK_BAN)       console.error("[PROXY] ❌ WEBHOOK_BAN belum diset!");
+if (!WEBHOOK_KICK)      console.error("[PROXY] ❌ WEBHOOK_KICK belum diset!");
+if (!WEBHOOK_ADMIN)     console.error("[PROXY] ❌ WEBHOOK_ADMIN belum diset!");
+if (!WEBHOOK_UNBAN)     console.error("[PROXY] ❌ WEBHOOK_UNBAN belum diset!");
+if (!WEBHOOK_VIOLATION) console.error("[PROXY] ❌ WEBHOOK_VIOLATION belum diset!");
+if (!SECRET_KEY)        console.error("[PROXY] ❌ WEBHOOK_SECRET belum diset!");
 
 // Rate limiting
 const rateLimitMap = new Map();
@@ -29,9 +37,13 @@ function rateLimit(ip) {
 }
 
 // Forward ke Discord
-async function sendToDiscord(embed) {
+async function sendToDiscord(webhookUrl, embed) {
+  if (!webhookUrl) {
+    console.error("[PROXY] ❌ Webhook URL kosong, skip!");
+    return { ok: false, error: "Webhook URL not configured" };
+  }
   try {
-    const res = await fetch(WEBHOOK_URL, {
+    const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -176,10 +188,21 @@ app.post("/notify", async (req, res) => {
     return res.status(400).json({ ok: false, error: "Missing type or data" });
   }
 
+  // ✅ Pilih webhook sesuai type notif
+  let webhookUrl;
+  switch (type) {
+    case "ban":       webhookUrl = WEBHOOK_BAN;       break;
+    case "kick":      webhookUrl = WEBHOOK_KICK;      break;
+    case "unban":     webhookUrl = WEBHOOK_UNBAN;     break;
+    case "violation": webhookUrl = WEBHOOK_VIOLATION; break;
+    case "admin":     webhookUrl = WEBHOOK_ADMIN;     break;
+    default:          webhookUrl = WEBHOOK_BAN;
+  }
+
   console.log(`[PROXY] Incoming: type=${type}, player=${data.username}, game=${gameId}`);
 
   const embed = buildEmbed(type, data);
-  const result = await sendToDiscord(embed);
+  const result = await sendToDiscord(webhookUrl, embed);
   return res.json(result);
 });
 
