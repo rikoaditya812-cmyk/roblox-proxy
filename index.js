@@ -1,43 +1,20 @@
-// proxy-server/index.js
-// Deploy ini ke Railway.app atau Render.com (gratis)
-//
-// CARA DEPLOY KE RAILWAY:
-// 1. Buat akun di railway.app
-// 2. New Project -> Deploy from GitHub repo (upload folder ini)
-// 3. Atau pakai Railway CLI: railway up
-// 4. Copy URL yang dikasih Railway (misal: https://namaapp.up.railway.app)
-//
-// CARA DEPLOY KE RENDER:
-// 1. Buat akun di render.com
-// 2. New -> Web Service -> upload/connect repo ini
-// 3. Build command: npm install
-// 4. Start command: node index.js
-
 const express = require("express");
 const app = express();
 app.use(express.json());
 
-// ============================================================
-// GANTI INI: Place ID game Roblox lo
-// Cari di: Game Settings -> Basic Info -> Place ID
-// ============================================================
+// ✅ Ambil dari Railway Variables, bukan hardcode
+const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const SECRET_KEY  = process.env.SECRET_KEY;
+
 const ALLOWED_GAME_IDS = [
-  "9860616417", // <-- Ganti dengan Place ID game lo
+  "9860616417",
 ];
 
-// ============================================================
-// GANTI INI: Password rahasia lo
-// Harus sama persis dengan yang di script Roblox
-// ============================================================
-const SECRET_KEY = "Jancok123@";
+// Validasi saat startup
+if (!WEBHOOK_URL) console.error("[PROXY] ❌ DISCORD_WEBHOOK_URL belum diset di Railway Variables!");
+if (!SECRET_KEY)  console.error("[PROXY] ❌ SECRET_KEY belum diset di Railway Variables!");
 
-// ============================================================
-// GANTI INI: Satu Discord Webhook URL untuk semua notif
-// Cara buat: Discord channel -> Edit -> Integrations -> Webhooks -> New Webhook -> Copy URL
-// ============================================================
-const WEBHOOK_URL = "https://discord.com/api/webhooks/1488594199615111219/Zftw603-dm6An6Gtvp5P94CKPsrhw-FfHMbK-wmT1DorJ0hQGiMN0R49VvPTz9HDrSxU"; // <-- Ganti ini
-
-// Rate limiting sederhana
+// Rate limiting
 const rateLimitMap = new Map();
 function rateLimit(ip) {
   const now = Date.now();
